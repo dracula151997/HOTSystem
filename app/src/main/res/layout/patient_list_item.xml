@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_margin="8dp"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:foreground="?selectableItemBackground"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:padding="4dp"
+            android:textAppearance="@style/Base.TextAppearance.AppCompat.Title"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:text="Patient name"
+            android:id="@+id/patient_name_list_item"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Patient age"
+            android:padding="4dp"
+            android:layout_marginBottom="8dp"
+            android:layout_marginStart="8dp"
+            android:layout_below="@id/patient_name_list_item"
+            android:id="@+id/patient_age_list_item" />
+
+        <ImageButton
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_alignParentEnd="true"
+            android:layout_margin="8dp"
+            android:id="@+id/remove_button"
+            android:tint="@color/colorAccent"
+            android:background="@android:color/transparent"
+            android:src="@drawable/ic_clear_black_24dp"/>
+
+    </RelativeLayout>
+
+</androidx.cardview.widget.CardView>

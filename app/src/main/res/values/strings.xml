@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Arduino</string>
+    <string name="slogan">Check yourself</string>
+    <string name="new_patient">New Patient</string>
+    <string name="patient_name">Patient name</string>
+    <string name="patient_age">Patient age</string>
+</resources>

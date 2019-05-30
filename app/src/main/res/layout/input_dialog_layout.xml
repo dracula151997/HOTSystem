@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp">
+
+    <EditText
+        android:id="@+id/patient_name_et"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/patient_name"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp" />
+
+    <EditText
+        android:id="@+id/patient_age_et"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+
+        android:layout_marginTop="8dp"
+        android:hint="@string/patient_age"
+
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp" />
+
+
+</LinearLayout>
