@@ -2,6 +2,7 @@ package arduino.semicolon.com.arduino.adapter;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -16,22 +17,18 @@ import androidx.recyclerview.widget.RecyclerView;
 import arduino.semicolon.com.arduino.R;
 import arduino.semicolon.com.arduino.database.DatabaseClient;
 import arduino.semicolon.com.arduino.database.DatabaseEntity;
+import arduino.semicolon.com.arduino.ui.activity.MainActivity;
 
 public class PatientAdapter extends RecyclerView.Adapter<PatientAdapter.ViewHolder> {
     private Context context;
     private List<DatabaseEntity> dataSet;
     private Activity activity;
 
-    private OnItemClickedListener onItemClickedListener;
 
     public PatientAdapter(Context context, Activity activity, List<DatabaseEntity> dataSet) {
         this.context = context;
         this.dataSet = dataSet;
         this.activity = activity;
-    }
-
-    public void setOnItemClickedListener(OnItemClickedListener onItemClickedListener) {
-        this.onItemClickedListener = onItemClickedListener;
     }
 
     @NonNull
@@ -48,18 +45,25 @@ public class PatientAdapter extends RecyclerView.Adapter<PatientAdapter.ViewHold
         holder.name.setText(entity.getName());
         holder.age.setText(entity.getAge());
 
-
-        holder.remove.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dataSet.remove(entity);
-                notifyItemRemoved(position);
-
-                new DeletePatient(entity)
-                        .execute();
-            }
+        holder.itemView.setOnClickListener(v -> {
+            Intent in = new Intent(context, MainActivity.class);
+            in.putExtra("id", entity.getId());
+            context.startActivity(in);
         });
 
+
+        holder.remove.setOnClickListener(v -> {
+
+            new DeletePatient(entity)
+                    .execute();
+
+
+            dataSet.remove(position);
+            notifyItemRemoved(position);
+            notifyItemRangeChanged(position, dataSet.size());
+
+
+        });
 
 
     }
@@ -69,7 +73,6 @@ public class PatientAdapter extends RecyclerView.Adapter<PatientAdapter.ViewHold
     public int getItemCount() {
         return dataSet.size();
     }
-
 
 
     public class ViewHolder extends RecyclerView.ViewHolder {

@@ -10,12 +10,12 @@ import arduino.semicolon.com.arduino.R;
 
 public class Common {
 
-    public static void intent(Context context, Class<?> cls){
+    public static void intent(Context context, Class<?> cls) {
         Intent in = new Intent(context, cls);
         context.startActivity(in);
     }
 
-    public static AlertDialog.Builder showCustomDialog(Context context, View customView){
+    public static AlertDialog.Builder showCustomDialog(Context context, View customView) {
 
         return new AlertDialog.Builder(context)
                 .setIcon(context.getResources().getDrawable(R.drawable.ic_person_add_black_24dp))
@@ -23,7 +23,7 @@ public class Common {
                 .setView(customView);
     }
 
-    public static String getStringFromEditText(EditText editText){
+    public static String getStringFromEditText(EditText editText) {
         return editText.getText().toString();
     }
 }

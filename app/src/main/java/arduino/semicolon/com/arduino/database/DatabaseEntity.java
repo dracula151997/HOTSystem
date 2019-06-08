@@ -12,6 +12,7 @@ import androidx.room.TypeConverters;
 public class DatabaseEntity implements Serializable {
 
     @PrimaryKey(autoGenerate = true)
+    @ColumnInfo(name = "id")
     private int id;
 
     @ColumnInfo(name = "patient_name")

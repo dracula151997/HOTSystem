@@ -8,6 +8,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
@@ -17,15 +18,13 @@ import android.widget.Toast;
 import com.ahmedabdelmeged.bluetoothmc.BluetoothMC;
 import com.ahmedabdelmeged.bluetoothmc.ui.BluetoothDevices;
 import com.ahmedabdelmeged.bluetoothmc.util.BluetoothStates;
+import com.ahmedabdelmeged.bluetoothmc.util.InputDataHelper;
 import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
-import java.util.Random;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -43,24 +42,27 @@ import static arduino.semicolon.com.arduino.util.LoggerUtil.error;
 import static arduino.semicolon.com.arduino.util.LoggerUtil.verbose;
 import static arduino.semicolon.com.arduino.util.SharedPreferencesManger.LoadStringData;
 
-public class MainActivity extends AppCompatActivity implements BluetoothMC.BluetoothConnectionListener,
-        BluetoothMC.BluetoothErrorsListener, BluetoothMC.onDataReceivedListener {
+public class MainActivity extends AppCompatActivity implements
+        BluetoothMC.BluetoothConnectionListener,
+        BluetoothMC.BluetoothErrorsListener,
+        BluetoothMC.onDataReceivedListener {
 
     private static final String TAG = MainActivity.class.getName();
     private BluetoothMC bluetoothMC;
-
-
     private LineGraphSeries<DataPoint> esgGraphSeries;
     private GraphView heartBeatsGraph;
-
     private Toolbar toolbar;
     private TextView tempListTextView,
             tempAverageTextView, tempStateTextView,
-            co2ListTextView, co2AverageTextView, co2StateTextView;
+            co2ListTextView, co2AverageTextView, co2StateTextView,
+            pulseSenseTextView, pulseSenseAverage, pulseSenseState;
+    private int id;
+    private InputDataHelper dataHelper;
 
     PublishSubject<Double> esgGraphSubject;
     PublishSubject<Integer> tempSubject;
     PublishSubject<Double> co2Subject;
+    PublishSubject<Double> pulseSenseSubject;
 
     String patientName, patientAge;
 
@@ -70,6 +72,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothMC.Bluet
 
     private List<Double> tempList = new ArrayList<>();
     private List<Double> co2List = new ArrayList<>();
+    private List<Double> pulseSenseList = new ArrayList<Double>();
 
     private double pulseAverge, co2Average, tempAverage;
 
@@ -81,16 +84,31 @@ public class MainActivity extends AppCompatActivity implements BluetoothMC.Bluet
         initBluetooth();
         initView();
 
+        initGraph();
+
+
         getDataFromSharedPreference();
 
-        initGraph();
         setBluetoothListeners();
+        dataHelper = new InputDataHelper();
 
         setSupportActionBar(toolbar);
+
+        if (getIntent() != null) {
+            if (getIntent().hasExtra("id")) {
+                id = getIntent().getIntExtra("id", 0);
+            }
+
+            if (id > 0) {
+                getPatientInfoById();
+            }
+
+        }
 
         databaseEntity = new DatabaseEntity();
 
         esgGraphSubject = PublishSubject.create();
+
         esgGraphSubject.subscribe(new Observer<Double>() {
             @Override
             public void onSubscribe(Disposable d) {
@@ -99,9 +117,9 @@ public class MainActivity extends AppCompatActivity implements BluetoothMC.Bluet
 
             @Override
             public void onNext(Double integer) {
-                Log.v(TAG, "integer: " + integer);
-                lastXPoint += 1d;
-                esgGraphSeries.appendData(new DataPoint(lastXPoint, integer), false, 1000);
+                Log.v(TAG, "ecg graph point: : " + integer);
+                lastXPoint += 10d;
+                esgGraphSeries.appendData(new DataPoint(lastXPoint, integer), false, 100 * 1000);
 
             }
 
@@ -126,17 +144,15 @@ public class MainActivity extends AppCompatActivity implements BluetoothMC.Bluet
             @Override
             public void onNext(Integer value) {
                 verbose("temp value: " + value);
-                tempList.add(value.doubleValue());
 
-                if (tempListTextView.getText() != null) {
+                if (tempListTextView.getText() != null && tempList.size() <= 10) {
                     tempListTextView.setText("");
-                    tempListTextView.setText(tempList.toString());
+                    tempListTextView.setText(value + "");
+                } else {
+                    return;
                 }
 
-                tempAverage = getAverage(tempList);
-                tempAverageTextView.setText(String.format("%s", tempAverage));
-
-                String state = getState(tempAverage, "temp");
+                String state = getState(value, "temp");
                 tempStateTextView.setText(state);
 
 
@@ -164,16 +180,47 @@ public class MainActivity extends AppCompatActivity implements BluetoothMC.Bluet
             public void onNext(Double co2Value) {
                 verbose("co2 value: " + co2Value);
 
-                co2List.add(co2Value);
                 if (co2ListTextView.getText() != null) {
                     co2ListTextView.setText(" ");
-                    co2ListTextView.setText(co2List.toString());
+                    co2ListTextView.setText(co2Value + "");
                 }
 
                 co2Average = getCO2Average(co2List);
-                co2AverageTextView.setText(co2Average + "");
 
-                co2StateTextView.setText(getState(co2Average, "co2"));
+                co2StateTextView.setText(getState(co2Value, "co2"));
+
+
+            }
+
+            @Override
+            public void onError(Throwable e) {
+
+            }
+
+            @Override
+            public void onComplete() {
+
+            }
+        });
+
+        pulseSenseSubject = PublishSubject.create();
+        pulseSenseSubject.subscribe(new Observer<Double>() {
+            @Override
+            public void onSubscribe(Disposable d) {
+
+            }
+
+            @Override
+            public void onNext(Double values) {
+                verbose("Heart rate: " + values);
+                if (pulseSenseTextView.getText() != null) {
+                    pulseSenseTextView.setText("");
+                    pulseSenseTextView.setText(values + "");
+                }
+
+                pulseAverge = getCO2Average(pulseSenseList);
+
+                pulseSenseState.setText(getState(pulseAverge, "heart rate"));
 
 
             }
@@ -204,17 +251,22 @@ public class MainActivity extends AppCompatActivity implements BluetoothMC.Bluet
 
     }
 
+    private void getPatientInfoById() {
+        new GetPatientInfoById().execute();
+
+    }
+
     private void getDataFromSharedPreference() {
         patientName = LoadStringData(this, PATIENT_NAME);
         patientAge = LoadStringData(this, PATIENT_AGE);
     }
 
-    private double getCO2Average(List<Double> co2List) {
+    private double getCO2Average(List<Double> list) {
         double avg = 0;
         double total = 0;
-        for (int i = 0; i < co2List.size(); i++) {
-            total += co2List.get(i);
-            avg = total / co2List.size();
+        for (int i = 0; i < list.size(); i++) {
+            total += list.get(i);
+            avg = total / list.size();
 
 
         }
@@ -232,8 +284,13 @@ public class MainActivity extends AppCompatActivity implements BluetoothMC.Bluet
                 }
                 break;
             case "temp":
-                if (average >= 37 && average <= 38) {
-                    state = "Safe";
+                if (average >= 36.5 && average <= 37.5) {
+                    state = "Normal";
+                } else if (average == 37.5 || average == 38.3) {
+                    state = "Fever";
+                } else if (average < 35.0) {
+                    state = "Hypothermia";
+
                 }
                 break;
             case "heart rate":
@@ -272,14 +329,14 @@ public class MainActivity extends AppCompatActivity implements BluetoothMC.Bluet
     }
 
     private void initGraph() {
-        heartBeatsGraph.setTitle("ESG Graph");
+        heartBeatsGraph.setTitle("ECG Graph");
         heartBeatsGraph.getViewport().setYAxisBoundsManual(true);
-        heartBeatsGraph.getViewport().setMinY(950);
+        heartBeatsGraph.getViewport().setMinY(0);
         heartBeatsGraph.getViewport().setMaxY(1000);
 
         heartBeatsGraph.getViewport().setXAxisBoundsManual(true);
-        heartBeatsGraph.getViewport().setMinX(100);
-        heartBeatsGraph.getViewport().setMaxX(1000);
+        heartBeatsGraph.getViewport().setMinX(0);
+        heartBeatsGraph.getViewport().setMaxX(500);
 
 
         heartBeatsGraph.getViewport().setScrollable(true);
@@ -287,7 +344,7 @@ public class MainActivity extends AppCompatActivity implements BluetoothMC.Bluet
 
 
         esgGraphSeries = new LineGraphSeries<>();
-        esgGraphSeries.appendData(new DataPoint(0, 0), false, 10000);
+        esgGraphSeries.appendData(new DataPoint(0, 0), false, 100 * 1000);
         heartBeatsGraph.addSeries(esgGraphSeries);
 
     }
@@ -297,12 +354,13 @@ public class MainActivity extends AppCompatActivity implements BluetoothMC.Bluet
         toolbar = findViewById(R.id.toolbar);
 
         tempListTextView = findViewById(R.id._temperture_text_view);
-        tempAverageTextView = findViewById(R.id._temperture_average_text_view);
         tempStateTextView = findViewById(R.id._temperture_state_text_view);
 
         co2ListTextView = findViewById(R.id._co2_list_text);
-        co2AverageTextView = findViewById(R.id._co2_average_text);
         co2StateTextView = findViewById(R.id._co2_state_text);
+
+        pulseSenseTextView = findViewById(R.id._pulse_sense_text_view);
+        pulseSenseState = findViewById(R.id._pulse_sense_state_text_view);
     }
 
     @Override
@@ -317,7 +375,12 @@ public class MainActivity extends AppCompatActivity implements BluetoothMC.Bluet
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.main_menu, menu);
+        MenuInflater menuInflater = getMenuInflater();
+        menuInflater.inflate(R.menu.main_menu, menu);
+        if (id != 0) {
+            menu.findItem(R.id.action_patients).setVisible(false);
+        }
+
         return true;
     }
 
@@ -335,7 +398,12 @@ public class MainActivity extends AppCompatActivity implements BluetoothMC.Bluet
                 new SaveAsyncTask().execute();
                 break;
             case R.id.action_reset:
+                Intent intent2 = new Intent(this, GraphViewActivity.class);
+                startActivity(intent2);
                 break;
+            case R.id.action_patients:
+                Intent intent = new Intent(this, PatientActivity.class);
+                startActivity(intent);
         }
         return super.onOptionsItemSelected(item);
     }
@@ -347,9 +415,14 @@ public class MainActivity extends AppCompatActivity implements BluetoothMC.Bluet
             databaseEntity.setAge(patientAge);
             databaseEntity.setTempList(tempList);
             databaseEntity.setTempAverage(tempAverage);
+            databaseEntity.setTempState(tempStateTextView.getText().toString());
             databaseEntity.setName(patientName);
             databaseEntity.setCo2List(co2List);
             databaseEntity.setAverage(co2Average);
+            databaseEntity.setCo2State(co2StateTextView.getText().toString());
+            databaseEntity.setPulseSenseList(pulseSenseList);
+            databaseEntity.setPulseAverage(pulseAverge);
+            databaseEntity.setPulseState(pulseSenseState.getText().toString());
 
             DatabaseClient.getInstance(getApplicationContext())
                     .getAppDatabase().databaseDao().insert(databaseEntity);
@@ -369,8 +442,8 @@ public class MainActivity extends AppCompatActivity implements BluetoothMC.Bluet
 
         final EditText editText = view.findViewById(R.id.add_value_edit);
         builder.setPositiveButton("Add Value", (dialog, which) -> {
-            double s = Double.parseDouble(editText.getText().toString());
-            co2Subject.onNext(s);
+            int temp = Integer.parseInt(editText.getText().toString());
+            tempSubject.onNext(temp);
             dialog.dismiss();
         }).setNegativeButton("No", (dialog, which) -> dialog.dismiss());
 
@@ -433,7 +506,54 @@ public class MainActivity extends AppCompatActivity implements BluetoothMC.Bluet
 
     @Override
     public void onDataReceived(String data) {
-        verbose("onDataReceived: data received = " + data.trim());
+        verbose("onDataReceived: " + data);
+
+    /*    String[] datas = data.split("-");
+        if (datas.length >= 3) {
+            String temp = datas[0];
+            String pulse = datas[1];
+            String o2 = datas[3];
+
+
+            if (!temp.equals("")) {
+                tempSubject.onNext(Integer.valueOf(temp));
+            }
+
+            if (!pulse.equals("")) {
+                pulseSenseSubject.onNext(Double.valueOf(pulse));
+            }
+
+
+            if (!o2.equals("")) {
+                co2Subject.onNext(Double.valueOf(o2));
+            }
+
+
+
+
+        }*/
+
+   /*     if (sensors.size() >= 3) {
+            String tempSensor = sensors.get(0).trim();
+            tempSubject.onNext(Integer.valueOf(tempSensor));
+            verbose("Temp: " + tempSensor);
+
+       *//*     String ecgSensor = sensors.get(0).trim();
+            esgGraphSubject.onNext(Double.valueOf(ecgSensor));*//*
+
+            String pulseSenseSensor = sensors.get(1).trim();
+            pulseSenseSubject.onNext(Double.valueOf(pulseSenseSensor));
+            verbose("pulse: " + pulseSenseSensor);
+
+
+            String o2Sensor = sensors.get(2).trim();
+            co2Subject.onNext(Double.valueOf(o2Sensor));
+            verbose("o2: " + o2Sensor);
+
+
+        }*/
+
+
         String[] esgPoints = data.trim().split(" ");
 
         for (String esgData : esgPoints) {
@@ -447,10 +567,37 @@ public class MainActivity extends AppCompatActivity implements BluetoothMC.Bluet
                 esgGraphSubject.onNext(esgPoint);
 
 
+            }
+        }
+    }
+
+    public class GetPatientInfoById extends AsyncTask<Void, Void, List<DatabaseEntity>> {
+
+        @Override
+        protected List<DatabaseEntity> doInBackground(Void... voids) {
+            List<DatabaseEntity> data = DatabaseClient.getInstance(MainActivity.this)
+                    .getAppDatabase().databaseDao().getPatientById(id);
+            return data;
+        }
+
+        @Override
+        protected void onPostExecute(List<DatabaseEntity> entities) {
+            super.onPostExecute(entities);
+            for (DatabaseEntity entity : entities) {
+                String age = entity.getAge();
+                List<Double> co2List = entity.getCo2List();
+                String co2State = entity.getCo2State();
+                String name = entity.getName();
+                List<Double> tempList = entity.getTempList();
+                String tempState = entity.getTempState();
+                tempListTextView.setText(tempList.toString());
+                tempStateTextView.setText(tempState);
+                co2StateTextView.setText(co2State);
+                co2ListTextView.setText(co2List.toString());
+                getSupportActionBar().setTitle(name + "info");
+                getSupportActionBar().setSubtitle(age + "years old");
 
             }
         }
-
-
     }
 }

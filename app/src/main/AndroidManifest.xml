@@ -20,7 +20,7 @@
         </activity>
         <activity android:name=".ui.activity.MainActivity" />
         <activity android:name=".ui.activity.PatientActivity" />
-        <activity android:name=".ui.activity.CheckPatientActivity"></activity>
+        <activity android:name=".ui.activity.GraphViewActivity"></activity>
     </application>
 
 </manifest>

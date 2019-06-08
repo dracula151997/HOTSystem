@@ -74,20 +74,17 @@ public class PatientActivity extends AppCompatActivity implements View.OnClickLi
                 final View view = LayoutInflater.from(this)
                         .inflate(R.layout.input_dialog_layout, null);
                 showCustomDialog(this, view)
-                .setPositiveButton("Add", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        EditText patientName = view.findViewById(R.id.patient_name_et);
-                        EditText patientAge = view.findViewById(R.id.patient_age_et);
+                .setPositiveButton("Add", (dialog, which) -> {
+                    EditText patientName = view.findViewById(R.id.patient_name_et);
+                    EditText patientAge = view.findViewById(R.id.patient_age_et);
 
-                        String name = getStringFromEditText(patientName);
-                        String age = getStringFromEditText(patientAge);
+                    String name = getStringFromEditText(patientName);
+                    String age = getStringFromEditText(patientAge);
 
-                        SaveData(PatientActivity.this, PATIENT_NAME, name);
-                        SaveData(PatientActivity.this, PATIENT_AGE, age);
+                    SaveData(PatientActivity.this, PATIENT_NAME, name);
+                    SaveData(PatientActivity.this, PATIENT_AGE, age);
 
-                        intent(PatientActivity.this, MainActivity.class);
-                    }
+                    intent(PatientActivity.this, MainActivity.class);
                 }).show();
                 break;
 

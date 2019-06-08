@@ -23,5 +23,8 @@ public interface DatabaseDao {
     @Query("SELECT * FROM DatabaseEntity")
     List<DatabaseEntity> getAllPatients();
 
+    @Query("SELECT * FROM DatabaseEntity WHERE id LIKE :id")
+    List<DatabaseEntity> getPatientById(int id);
+
 
 }
